@@ -12,8 +12,8 @@ app = Flask(__name__)
 
 # Load config
 import yaml
-with open('./config.yml', 'r') as yml_:
-    config = yaml.load(yml_)
+with open('./config.yml', 'r') as yml_f:
+    config = yaml.load(yml_f, Loader=yaml.BaseLoader)
 
 # Channel Access Token
 line_bot_api = LineBotApi(config['Linebot']['access_token'])
