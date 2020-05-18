@@ -12,17 +12,21 @@ app = Flask(__name__)
 
 import os
 for env_k, env_v in os.environ.items():
-  print(f'{env_k}: {env_v}')
+    print(f'{env_k}: {env_v}')
 
-# Load config
-import yaml
-with open('./config.yml', 'r') as yml_f:
-    config = yaml.load(yml_f, Loader=yaml.BaseLoader)
+if not os.path.exists('./config.yml'):
+    # Load config
+    import yaml
+    with open('./config.yml', 'r') as yml_f:
+        config = yaml.load(yml_f, Loader=yaml.BaseLoader)
 
-# Channel Access Token
-line_bot_api = LineBotApi(config['Linebot']['access_token'])
-# Channel Secret
-handler = WebhookHandler(config['Linebot']['secret'])
+    # Channel Access Token
+    line_bot_api = LineBotApi(config['Linebot']['access_token'])
+    # Channel Secret
+    handler = WebhookHandler(config['Linebot']['secret'])
+else:
+    line_bot_api = os.environ.get('access_token')
+    handler = os.environ.get('secret')
 
 # 監聽所有來自 /callback 的 Post Request
 @app.route("/callback", methods=['POST'])
