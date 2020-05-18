@@ -25,8 +25,8 @@ if os.path.exists('./config.yml'):
     # Channel Secret
     handler = WebhookHandler(config['Linebot']['secret'])
 else:
-    line_bot_api = os.environ.get('access_token')
-    handler = os.environ.get('secret')
+    line_bot_api = LineBotApi(os.environ.get('access_token'))
+    handler = WebhookHandler(os.environ.get('secret'))
 
 # 監聽所有來自 /callback 的 Post Request
 @app.route("/callback", methods=['POST'])
