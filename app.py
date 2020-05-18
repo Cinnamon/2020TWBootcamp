@@ -14,7 +14,7 @@ import os
 for env_k, env_v in os.environ.items():
     print(f'{env_k}: {env_v}')
 
-if not os.path.exists('./config.yml'):
+if os.path.exists('./config.yml'):
     # Load config
     import yaml
     with open('./config.yml', 'r') as yml_f:
