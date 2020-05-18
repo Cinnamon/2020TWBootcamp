@@ -10,6 +10,10 @@ from linebot.models import *
 
 app = Flask(__name__)
 
+import os
+for env_k, env_v in os.environ.items():
+  print(f'{env_k}: {env_v}')
+
 # Load config
 import yaml
 with open('./config.yml', 'r') as yml_f:
