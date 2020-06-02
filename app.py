@@ -44,31 +44,24 @@ else:
 input_ = {
     'context': '',  # type = str
     'qas': [
-        {
-            'question': ''  # type = str
-        },
-        {
-            'question': ''  # type = str
-        },
-        {
-            'question': ''  # type = str
-        }
+        # {'question': ''}, # type = dict(key: str)
     ]
 }
 
 # An example
 # input_ = {
 #     'context': "Rap is usually delivered over a beat, typically provided by a DJ, turntablist, beatboxer, or performed a cappella without accompaniment. Stylistically, rap occupies a gray area between speech, prose, poetry, and singing. The word, which predates the musical form, originally meant to lightly strike, and is now used to describe quick speech or repartee. The word had been used in British English since the 16th century. It was part of the African American dialect of English in the 1960s meaning to converse, and very soon after that in its present usage as a term denoting the musical style. Today, the term rap is so closely associated with hip-hop music that many writers use the terms interchangeably.",
-#     "qas": [{'question': 'What is the original meaning of the word rap?'},
-#             {'question': 'What does rap currently mean?'},
-#             {'question': 'When was rap first used?'},
-#             {'question': 'What is rap closely associated with today?'},
-#             {'question': 'Who is the most famous rap singer today?'},
-#             {'question': 'When did rap become popular?'},
-#             {'question': 'What does hip-hop mean?'},
-#             {'question': 'What is the difference between hip-hop and rap?'},
-#             {'question': 'What are the other musical styles besides rap?'},
-#             {'question': 'How is rap usually delivered?'}
+#     "qas": [
+#         {'question': 'What is the original meaning of the word rap?'},
+#         {'question': 'What does rap currently mean?'},
+#         {'question': 'When was rap first used?'},
+#         {'question': 'What is rap closely associated with today?'},
+#         {'question': 'Who is the most famous rap singer today?'},
+#         {'question': 'When did rap become popular?'},
+#         {'question': 'What does hip-hop mean?'},
+#         {'question': 'What is the difference between hip-hop and rap?'},
+#         {'question': 'What are the other musical styles besides rap?'},
+#         {'question': 'How is rap usually delivered?'}
 #     ]
 # }
 input_context_msg = 'Input context'
@@ -146,7 +139,7 @@ def handle_message(event):
             reply('You have already input 3 questions')
         else:
             reply(f'You input a question\n{message.text}')
-            handle_message.input_['qas'][num_q]['question'] = message.text
+            handle_message.input_['qas'].append({'question': message.text})
         handle_message.state_ = 'init'
 
     for k, v in handle_message.input_.items():
