@@ -1,15 +1,10 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.utils.data as data
 from . import util
 
 from .args import get_test_args
-from collections import OrderedDict
-from json import dumps
 from .models import BiDAF
-from os.path import join
-from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from ujson import load as json_load
 from .util import collate_fn, SQuAD

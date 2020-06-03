@@ -1,6 +1,7 @@
 import os
 import time
 import copy
+import yaml
 import logging
 
 from flask import Flask, request, abort
@@ -8,28 +9,33 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import *
 
-from bidaf.prepro import transfer_format
-from bidaf.prepro import gen
-from bidaf.infer import build_inference
-from bidaf.infer import inference as bidaf_inference
-from bidaf.infer import get_test_args
+from model.bidaf.prepro import transfer_format
+from model.bidaf.prepro import gen
+from model.bidaf.infer import build_inference
+from model.bidaf.infer import inference as bidaf_inference
+from model.bidaf.infer import get_test_args
 
-from bert.infer_utils import evaluate
-from bert.infer_utils import transfer_format as bert_transfer_format
-from bert.infer import inference as bert_inference
+from model.bert.infer_utils import evaluate
+from model.bert.infer_utils import transfer_format as bert_transfer_format
+from model.bert.infer import inference as bert_inference
+
+logging.basicConfig(
+    level="DEBUG",  # INFO, DEBUG
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
 
 # print env variables
+logger.debug("Check environment variables")
 for env_k, env_v in os.environ.items():
-    print(f'{env_k}: {env_v}')
+    logger.debug(f'{env_k}: {env_v}')
 
 # read config
 if os.path.exists('./config.yml'):
     # Load config
-    import yaml
-
     with open('./config.yml', 'r') as yml_f:
         config = yaml.load(yml_f, Loader=yaml.BaseLoader)
 
@@ -86,8 +92,8 @@ def run_bidaf(_input):
 
 
 def run_bert(_input):
-    args, model, tokenizer = bert_inference(src_root='bert/')
-    bert_transfer_format(_input, src_root='bert/')
+    args, model, tokenizer = bert_inference(src_root='model/bert/')
+    bert_transfer_format(_input, src_root='model/bert/')
     result = evaluate(args, model, tokenizer)
     return result
 
@@ -109,8 +115,16 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    def show_input():
+        res = ''
+        for k_, v_ in handle_message.input_.items():
+            res = res + f'{k_}: {v_}\n'
+
     def reply(text):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=text))
+
+    logger.info('Enter Callback: handle_message()')
+    logger.debug(f'{TextMessage}')
 
     # init
     message = TextSendMessage(text=event.message.text)
@@ -118,13 +132,13 @@ def handle_message(event):
         handle_message.state_ = handle_message.state_
     except:
         handle_message.state_ = 'init'
-    print(handle_message.state_)
+    logger.debug(f'Current state: {handle_message.state_}')
 
     try:
         handle_message.input_ = handle_message.input_
     except:
         handle_message.input_ = copy.deepcopy(input_)
-    print(handle_message.input_)
+    logger.debug(f'Current input:\n{show_input()}')
 
     # state
     if handle_message.state_ == 'init':
@@ -134,7 +148,7 @@ def handle_message(event):
         handle_message.input_['context'] = message.text
         handle_message.state_ = 'init'
     elif handle_message.state_ == 'question':
-        num_q = len([q for q in handle_message.input_['qas'] if len(q['question']) > 0])
+        num_q = len([q for q in handle_message.input_['qas'] if len(q.get('question', '')) > 0])
         if num_q >= 3:
             reply('You have already input 3 questions')
         else:
@@ -142,20 +156,19 @@ def handle_message(event):
             handle_message.input_['qas'].append({'question': message.text})
         handle_message.state_ = 'init'
 
-    for k, v in handle_message.input_.items():
-        print(f'{k}: {v}')
+    logger.debug(f'Current input after state changes:\n{show_input()}')
 
     # reply message
     if message.text == input_reset_msg:
         handle_message.input_ = copy.deepcopy(input_)
         handle_message.state_ = 'init'
         reply('Reset Done')
-        print(handle_message.input_)
+        logger.debug(f'Current input after reset:\n{show_input()}')
     elif message.text == input_context_msg:
         reply('Please input a context')
         handle_message.state_ = 'context'
     elif message.text == input_question_msg:
-        num_q = len([q for q in handle_message.input_['qas'] if len(q['question']) > 0])
+        num_q = len([q for q in handle_message.input_['qas'] if len(q.get('question', '')) > 0])
         if num_q >= 3:
             reply('You have already input 3 questions')
             handle_message.state_ = 'init'
@@ -167,7 +180,7 @@ def handle_message(event):
         t1 = time.time()
         # answers = run_bidaf(handle_message.input_)
         answers = run_bert(handle_message.input_)
-        print(time.time() - t1)
+        logger.debug(f'Running time of model: {time.time() - t1} sec')
 
         # send messages
         if len(answers) > 0:
