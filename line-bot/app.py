@@ -34,9 +34,9 @@ for env_k, env_v in os.environ.items():
     logger.debug(f'{env_k}: {env_v}')
 
 # read config
-if os.path.exists('./config.yml'):
+if os.path.exists('line-bot/config.yml'):
     # Load config
-    with open('./config.yml', 'r') as yml_f:
+    with open('line-bot/config.yml', 'r') as yml_f:
         config = yaml.load(yml_f, Loader=yaml.BaseLoader)
 
     # Channel Access Token
