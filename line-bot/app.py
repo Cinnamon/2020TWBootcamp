@@ -2,22 +2,29 @@ import os
 import time
 import copy
 import yaml
+import json
 import logging
+import argparse
 
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import *
 
-from model.bidaf.prepro import transfer_format
-from model.bidaf.prepro import gen
-from model.bidaf.infer import build_inference
-from model.bidaf.infer import inference as bidaf_inference
-from model.bidaf.infer import get_test_args
+# from model.bidaf.prepro import transfer_format
+# from model.bidaf.prepro import gen
+# from model.bidaf.infer import build_inference
+# from model.bidaf.infer import inference as bidaf_inference
+# from model.bidaf.infer import get_test_args
 
-from model.bert.infer_utils import evaluate
-from model.bert.infer_utils import transfer_format as bert_transfer_format
-from model.bert.infer import inference as bert_inference
+# from model.bert.infer_utils import evaluate
+# from model.bert.infer_utils import transfer_format as bert_transfer_format
+# from model.bert.infer import inference as bert_inference
+
+from model.utils import init_bert
+from model.utils import run_bert
+from model.utils import init_bidaf
+from model.utils import run_bidaf
 
 from utils import check_input_valid
 from utils import is_input_command
@@ -33,46 +40,44 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# setup app
-app = Flask(__name__)
-
-# print env variables
+# check env variables
 logger.debug("Check environment variables")
 for env_k, env_v in os.environ.items():
     logger.debug(f'{env_k}: {env_v}')
 
-# Load config
+
+# parse args
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--model', help='Select model', default='bert', required=False, choices=['bert', 'bidaf'])
+parser.add_argument('--example', help='Use example to test model', action='store_true')
+args, unknown = parser.parse_known_args()
+
+# setup app
+app = Flask(__name__)
+if args.model == 'bert':
+    app.model = init_bert()
+    app.predict = run_bert
+elif args.model == 'bidaf':
+    app.model = init_bidaf()
+    app.predict = run_bidaf
+
+# load example
+if args.example:
+    with open('line-bot/example.json', 'r') as f:
+        example_input = json.load(f)
+        logger.debug(f'Loaded example: {example_input}')
+
+# load config
+config_path = 'line-bot/config.yml'
 try:
-    with open('line-bot/config.yml', 'r') as yml_f:
+    with open(config_path, 'r') as yml_f:
         config = yaml.load(yml_f, Loader=yaml.BaseLoader)
     # Channel Access Token
     line_bot_api = LineBotApi(config['Linebot']['access_token'])
     # Channel Secret
     handler = WebhookHandler(config['Linebot']['secret'])
 except:
-    logger.exception('Please check if line-bot/config.yml exists')
-
-
-def run_bidaf(_input):
-    args = get_test_args()
-    setattr(args, 'test_record_file', './infer/data/infer.npz')
-    setattr(args, 'word_emb_file', './infer/data/word_emb.json')
-    setattr(args, 'char_emb_file', './infer/data/char_emb.json')
-    setattr(args, 'test_eval_file', './infer/data/infer_eval.json')
-    setattr(args, 'load_path', './infer/weight/best.pth.tar')
-
-    m = build_inference(args)
-    d = transfer_format(_input)
-    gen(d, word2idx='./infer/data/word2idx.json', char2idx='./infer/data/char2idx.json')
-    result = bidaf_inference(m)
-    return result
-
-
-def run_bert(_input):
-    args, model, tokenizer = bert_inference(src_root='line-bot/model/bert/')
-    bert_transfer_format(_input, src_root='line-bot/model/bert/')
-    result = evaluate(args, model, tokenizer)
-    return result
+    logger.exception(f'Please check if {config_path} exists')
 
 
 @app.route("/callback", methods=['POST'])
@@ -110,14 +115,14 @@ def handle_message(event):
             # run model
             t1 = time.time()
             handle_message.state_ = 'processing'
-            # answers = run_bidaf(handle_message.input_)
-            answers = run_bert(handle_message.input_)
+            answers = app.predict(handle_message.input_, app.model)
             answers = answers.get('1')
             logger.debug(f'Running time of model: {time.time() - t1} sec')
+            logger.debug(f'This answer is \'{answers}\'')
 
             # save to answer list
             qa_id = len(handle_message.answers) + 1
-            handle_message.answers.append(f'Q{qa_id}: {message.text}\nA{qa_id}: {answers}')
+            handle_message.answers.append(f'Q{qa_id}: {message.text}\nA{qa_id}: {answers}\n')
 
             # release question list
             handle_message.input_['qas'].clear()
@@ -180,6 +185,14 @@ def handle_message(event):
             handle_message.state_ = 'question'
 
     elif message.text == input_answer_msg:
+        if args.example:
+            answers = app.predict(handle_message.input_, app.model)
+            handle_message.answers = []
+            for qa_id, qas in enumerate(handle_message.input_.get("qas")):
+                ques = qas.get('question')
+                a = answers.get(str(qa_id + 1))
+                handle_message.answers.append(f'Q{qa_id}: {ques}\nA{qa_id}: {a}\n')
+
         # send messages
         if len(handle_message.answers) > 0:
             ans = '\n'.join([a for a in handle_message.answers])
@@ -192,8 +205,8 @@ def handle_message(event):
         handle_message.state_ = 'init'
 
 
-setattr(handle_message, 'state_', 'init')  # [init, context, question, processing]
-setattr(handle_message, 'input_', copy.deepcopy(input_))
+setattr(handle_message, 'state_', 'init' if args.example is False else 'question')  # [init, context, question, processing]
+setattr(handle_message, 'input_', copy.deepcopy(input_ if args.example is False else example_input))
 setattr(handle_message, 'answers', list())
 
 
