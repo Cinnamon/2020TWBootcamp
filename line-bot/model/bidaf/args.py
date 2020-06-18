@@ -5,6 +5,8 @@ Author:
 """
 
 import argparse
+bidaf_src_root = 'line-bot/model/bidaf/'
+
 
 def get_test_args():
     """Get arguments needed in test.py."""
@@ -49,18 +51,18 @@ def add_common_args(parser):
     """Add arguments common to all 3 scripts: setup.py, train.py, test.py"""
     parser.add_argument('--test_record_file',
                         type=str,
-                        default='/Users/blake.pan/Project/line-bot-demo/infer/data/infer.npz')
+                        default=bidaf_src_root + 'data/infer.npz')
     parser.add_argument('--word_emb_file',
                         type=str,
                         # default='./data/word_emb.json',
-                        default='/Users/blake.pan/Project/line-bot-demo/infer/data/word_emb.json')
+                        default=bidaf_src_root + 'data/word_emb.json')
     parser.add_argument('--char_emb_file',
                         type=str,
                         # default='./data/char_emb.json',
-                        default='/Users/blake.pan/Project/line-bot-demo/infer/data/char_emb.json')
+                        default=bidaf_src_root + 'data/char_emb.json')
     parser.add_argument('--test_eval_file',
                         type=str,
-                        default='/Users/blake.pan/Project/line-bot-demo/infer/data/infer_eval.json')
+                        default=bidaf_src_root + 'data/infer_eval.json')
 
 
 def add_train_test_args(parser):
@@ -96,6 +98,5 @@ def add_train_test_args(parser):
                         help='Number of examples to visualize in TensorBoard.')
     parser.add_argument('--load_path',
                         type=str,
-                        default='./weight/best.pth.tar',
-                        # default='/Users/blake.pan/Project/line-bot-demo/infer/weight/best.pth.tar',
+                        default=bidaf_src_root + 'weight/best.pth.tar',
                         help='Path to load as a model checkpoint.')
