@@ -19,61 +19,38 @@ from model.bert.infer_utils import evaluate
 from model.bert.infer_utils import transfer_format as bert_transfer_format
 from model.bert.infer import inference as bert_inference
 
+from utils import check_input_valid
+from utils import is_input_command
+from utils import input_context_msg, input_question_msg, input_answer_msg, input_reset_msg
+from utils import input_template as input_
+from utils import question_limit
+
+
+# setup logger
 logging.basicConfig(
     level="DEBUG",  # INFO, DEBUG
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
+# setup app
 app = Flask(__name__)
-
 
 # print env variables
 logger.debug("Check environment variables")
 for env_k, env_v in os.environ.items():
     logger.debug(f'{env_k}: {env_v}')
 
-# read config
-if os.path.exists('line-bot/config.yml'):
-    # Load config
+# Load config
+try:
     with open('line-bot/config.yml', 'r') as yml_f:
         config = yaml.load(yml_f, Loader=yaml.BaseLoader)
-
     # Channel Access Token
     line_bot_api = LineBotApi(config['Linebot']['access_token'])
     # Channel Secret
     handler = WebhookHandler(config['Linebot']['secret'])
-else:
-    line_bot_api = LineBotApi(os.environ.get('access_token'))
-    handler = WebhookHandler(os.environ.get('secret'))
-
-input_ = {
-    'context': '',  # type = str
-    'qas': [
-        # {'question': ''}, # type = dict(key: str)
-    ]
-}
-
-# An example
-# input_ = {
-#     'context': "Rap is usually delivered over a beat, typically provided by a DJ, turntablist, beatboxer, or performed a cappella without accompaniment. Stylistically, rap occupies a gray area between speech, prose, poetry, and singing. The word, which predates the musical form, originally meant to lightly strike, and is now used to describe quick speech or repartee. The word had been used in British English since the 16th century. It was part of the African American dialect of English in the 1960s meaning to converse, and very soon after that in its present usage as a term denoting the musical style. Today, the term rap is so closely associated with hip-hop music that many writers use the terms interchangeably.",
-#     "qas": [
-#         {'question': 'What is the original meaning of the word rap?'},
-#         {'question': 'What does rap currently mean?'},
-#         {'question': 'When was rap first used?'},
-#         {'question': 'What is rap closely associated with today?'},
-#         {'question': 'Who is the most famous rap singer today?'},
-#         {'question': 'When did rap become popular?'},
-#         {'question': 'What does hip-hop mean?'},
-#         {'question': 'What is the difference between hip-hop and rap?'},
-#         {'question': 'What are the other musical styles besides rap?'},
-#         {'question': 'How is rap usually delivered?'}
-#     ]
-# }
-input_context_msg = 'Input context'
-input_question_msg = 'Input questions'
-input_answer_msg = 'Answer'
-input_reset_msg = 'Reset'
+except:
+    logger.exception('Please check if line-bot/config.yml exists')
 
 
 def run_bidaf(_input):
@@ -92,8 +69,8 @@ def run_bidaf(_input):
 
 
 def run_bert(_input):
-    args, model, tokenizer = bert_inference(src_root='model/bert/')
-    bert_transfer_format(_input, src_root='model/bert/')
+    args, model, tokenizer = bert_inference(src_root='line-bot/model/bert/')
+    bert_transfer_format(_input, src_root='line-bot/model/bert/')
     result = evaluate(args, model, tokenizer)
     return result
 
@@ -115,80 +92,109 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    def show_input():
-        res = ''
-        for k_, v_ in handle_message.input_.items():
-            res = res + f'{k_}: {v_}\n'
-
     def reply(text):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=text))
 
-    logger.info('Enter Callback: handle_message()')
-    logger.debug(f'{TextMessage}')
-
-    # init
-    message = TextSendMessage(text=event.message.text)
-    try:
-        handle_message.state_ = handle_message.state_
-    except:
-        handle_message.state_ = 'init'
-    logger.debug(f'Current state: {handle_message.state_}')
-
-    try:
-        handle_message.input_ = handle_message.input_
-    except:
-        handle_message.input_ = copy.deepcopy(input_)
-    logger.debug(f'Current input:\n{show_input()}')
-
-    # state
-    if handle_message.state_ == 'init':
-        pass
-    elif handle_message.state_ == 'context':
-        reply(f'You input a context\n{message.text}')
-        handle_message.input_['context'] = message.text
-        handle_message.state_ = 'init'
-    elif handle_message.state_ == 'question':
-        num_q = len([q for q in handle_message.input_['qas'] if len(q.get('question', '')) > 0])
-        if num_q >= 3:
+    def handle_q():
+        num_qa_ = len(handle_message.answers)
+        if num_qa_ >= question_limit:
             reply('You have already input 3 questions')
+            handle_message.state_ = 'init'
+        elif not check_input_valid(handle_message.input_):
+            reply('Please input context first')
+            handle_message.state_ = 'init'
         else:
             reply(f'You input a question\n{message.text}')
             handle_message.input_['qas'].append({'question': message.text})
-        handle_message.state_ = 'init'
 
-    logger.debug(f'Current input after state changes:\n{show_input()}')
+            # run model
+            t1 = time.time()
+            handle_message.state_ = 'processing'
+            # answers = run_bidaf(handle_message.input_)
+            answers = run_bert(handle_message.input_)
+            answers = answers.get('1')
+            logger.debug(f'Running time of model: {time.time() - t1} sec')
 
-    # reply message
+            # save to answer list
+            qa_id = len(handle_message.answers) + 1
+            handle_message.answers.append(f'Q{qa_id}: {message.text}\nA{qa_id}: {answers}')
+
+            # release question list
+            handle_message.input_['qas'].clear()
+
+            handle_message.state_ = 'question'
+
+    # Receive Message
+    logger.info('Enter Callback: handle_message()')
+    message = TextSendMessage(text=event.message.text)
+
+    # Check attributes
+    logger.debug(f'Current state:\n{handle_message.state_}')
+    logger.debug(f'Current input:\n{handle_message.input_}')
+    logger.debug(f'Current answers:\n{handle_message.answers}')
+
+    # Update state
+    if handle_message.state_ == 'context':
+        if message.text == input_reset_msg:
+            pass
+        elif is_input_command(message.text):
+            reply(f'You input a command, please re-input')
+            return
+        else:
+            reply(f'You input a context\n{message.text}')
+            handle_message.input_['context'] = message.text
+            handle_message.state_ = 'init'
+
+    elif handle_message.state_ == 'question':
+        if message.text == input_reset_msg or message.text == input_answer_msg:
+            pass
+        elif is_input_command(message.text):
+            reply(f'You input a command, please re-input')
+            return
+        else:
+            handle_q()
+    else:
+        pass
+    logger.debug(f'Current input after state changes:\n{handle_message.input_}')
+
+    # Reply message
     if message.text == input_reset_msg:
         handle_message.input_ = copy.deepcopy(input_)
         handle_message.state_ = 'init'
         reply('Reset Done')
-        logger.debug(f'Current input after reset:\n{show_input()}')
+        logger.debug(f'Current input after reset:\n{handle_message.input_}')
+
     elif message.text == input_context_msg:
         reply('Please input a context')
         handle_message.state_ = 'context'
+
     elif message.text == input_question_msg:
-        num_q = len([q for q in handle_message.input_['qas'] if len(q.get('question', '')) > 0])
-        if num_q >= 3:
+        num_qa = len(handle_message.answers)
+        if num_qa >= question_limit:
             reply('You have already input 3 questions')
             handle_message.state_ = 'init'
+        elif not check_input_valid(handle_message.input_):
+            reply('Please input context first')
         else:
-            reply('Please input a question')
+            reply('Please start to input questions')
             handle_message.state_ = 'question'
-    elif message.text == input_answer_msg:
-        # run model
-        t1 = time.time()
-        # answers = run_bidaf(handle_message.input_)
-        answers = run_bert(handle_message.input_)
-        logger.debug(f'Running time of model: {time.time() - t1} sec')
 
+    elif message.text == input_answer_msg:
         # send messages
-        if len(answers) > 0:
-            ans = '\n'.join(f'{aid}: {ans}' for aid, ans in answers.items())
+        if len(handle_message.answers) > 0:
+            ans = '\n'.join([a for a in handle_message.answers])
             reply(ans)
+            handle_message.answers.clear()
+        elif handle_message.state_ == 'processing':
+            reply('Still in processing, please try again later')
         else:
             reply('No Answer')
         handle_message.state_ = 'init'
+
+
+setattr(handle_message, 'state_', 'init')  # [init, context, question, processing]
+setattr(handle_message, 'input_', copy.deepcopy(input_))
+setattr(handle_message, 'answers', list())
 
 
 if __name__ == "__main__":
