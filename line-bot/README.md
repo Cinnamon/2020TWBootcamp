@@ -2,7 +2,7 @@
 
 1. Copy config file
    ```
-   $ cp config_template.yml config.yml
+   $ cp line-bot/config_template.yml line-bot/config.yml
    ```
 
 2. Add your API token and secret key to config.yml
