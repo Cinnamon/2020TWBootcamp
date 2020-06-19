@@ -18,27 +18,40 @@
     access_token: <CHANNEL ACCESS TOKE>
     secret: <CHANNEL SECRET>
    ```
-   
-2. Run app.py
+
+2. Download model weights by dvc
+   Install awscli and dvc
    ```
-   $ python app.py
+   pip install "dvc[s3]"
+   pip install awscli
+   aws configure
+   ```
+   Enter the `aws_access_key_id`, `aws_secret_access_key`
+   
+   Update the lastest data by dvc
+   ```
+   $ dvc pull
+   ```
+
+3. Run app.py
+   ```
+   $ python line-bot/app.py
    ```
    
    ![](materials/app.png)
 
-3. [option] Local host as a server
-    1. Download [ngrok](https://ngrok.com/download) to 'line-bot-demo/ngrok'
-    2. Run local_server.sh
+4. Run server
+    1. Download [ngrok](https://ngrok.com/download) and save into 'line-bot/'
+    2. Run server by using ngrok
        ```
-       $ chmod +x local_server.sh
-       $ ./local_server.sh
+       $ ./line-bot/ngrok http -host-header "localhost:5000" 5000
         ```
     3. Copy url to webhook to LINE developers
        ![](materials/ngrok.png)
        
        ![](materials/update_webhook.png)
        
-4. Echo bot demo
+5. QA bot preview
     
     ![](materials/demo.png)
    
