@@ -1,5 +1,10 @@
 # line-bot-demo
 
+1. Install requirements
+   ```
+   $ pip install -r line-bot/requirements.txt
+   ```
+
 1. Copy config file
    ```
    $ cp line-bot/config_template.yml line-bot/config.yml
