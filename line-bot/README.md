@@ -28,7 +28,7 @@
    ```
    Enter the `aws_access_key_id`, `aws_secret_access_key`
    
-   Update the lastest data by dvc
+   Update the latest data by dvc
    ```
    $ dvc pull
    ```
