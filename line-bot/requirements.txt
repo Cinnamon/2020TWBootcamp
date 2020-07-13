@@ -8,7 +8,7 @@ numpy
 spacy
 ujson
 args
-torch===1.2.0
-torchvision===0.4.0
+torch==1.2.0
+torchvision==0.4.0
 tensorboardX
 transformers==2.10.0
