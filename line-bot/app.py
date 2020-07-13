@@ -35,7 +35,7 @@ from utils import question_limit
 
 # setup logger
 logging.basicConfig(
-    level="DEBUG",  # INFO, DEBUG
+    level="INFO",  # INFO, DEBUG
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -74,6 +74,7 @@ try:
         config = yaml.load(yml_f, Loader=yaml.BaseLoader)
     # Channel Access Token
     line_bot_api = LineBotApi(config['Linebot']['access_token'])
+
     # Channel Secret
     handler = WebhookHandler(config['Linebot']['secret'])
 except:
@@ -212,4 +213,4 @@ setattr(handle_message, 'answers', list())
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)
