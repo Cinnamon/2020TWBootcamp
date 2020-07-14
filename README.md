@@ -1,2 +1,5 @@
 # 2020TWBootcamp
-Erica
+
+## Members
+- Patrick
+- Erica
