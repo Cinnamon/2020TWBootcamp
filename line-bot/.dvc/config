@@ -1,4 +1,4 @@
 [core]
     remote = s3remote
 ['remote "s3remote"']
-    url = s3://research-tw/bootcamp2020/
+    url = s3://cinnamontwbootcamp/bootcamp2020/
