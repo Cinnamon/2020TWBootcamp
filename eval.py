@@ -88,6 +88,7 @@ if __name__ == '__main__':
     """
     
     model.load_state_dict('e3le2e5.pth')
+    model.eval()
     
     
     TEXT = "Sup! Sup. Let's see a play on Friday? Ok. Where should we meet? I don't know. How about the theme park? Sure! When? 9 pm? Sorry, I can't. How about 11 pm? Sure. See you then!"
