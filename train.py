@@ -62,7 +62,7 @@ if __name__ == '__main__':
     
     model.cuda()
     model.train()
-    for epoch in range(1):
+    for epoch in range(3):
         total_loss = 0
         
         for inputs, label in tqdm.tqdm(dataloader):
@@ -83,4 +83,4 @@ if __name__ == '__main__':
             
         print(f'Train loss {total_loss}')
         
-    
+    torch.save(model.state_dict(), 'e3le2e5.pth')
