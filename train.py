@@ -29,14 +29,14 @@ class SashimiDataset(Dataset):
         label = torch.LongTensor(label)
         
         plus_idx = (inputs['input_ids'] == 102).nonzero()[0,1]
-        label += plus_idx + 1
+        label += plus_idx
         
         return inputs, label
         
         
 def get_data(path, sep=',', index_col=None):
     data = pd.read_csv(path, sep=sep, index_col=index_col)
-    data['Text'] = [ast.literal_eval(data.Text[i])[0] for i in range(data.shape[0])]
+    #data['Text'] = [ast.literal_eval(data.Text[i])[0] for i in range(data.shape[0])]
     data['Label'] = [ast.literal_eval(data.Label[i]) for i in range(data.shape[0])]
     return data
 
@@ -53,16 +53,16 @@ if __name__ == '__main__':
         'Where to go?'
     ]
 
-    data = get_data('./data/training_data.csv', sep='\t')
+    data = get_data('./data/updated3500s.csv', sep='\t')
     dataset = SashimiDataset(data)
-    dataloader = DataLoader(dataset, batch_size=10, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
     
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), 2e-5)
     
     model.cuda()
     model.train()
-    for epoch in range(3):
+    for epoch in range(5):
         total_loss = 0
         
         for inputs, label in tqdm.tqdm(dataloader):
