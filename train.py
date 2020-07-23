@@ -29,7 +29,8 @@ class SashimiDataset(Dataset):
         label = torch.LongTensor(label)
         
         plus_idx = (inputs['input_ids'] == 102).nonzero()[0,1]
-        label += plus_idx
+        if label.tolist() != [0,0]:
+            label += plus_idx
         
         return inputs, label
         
