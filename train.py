@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
     data = get_data('./data/training_data.csv', sep='\t')
     dataset = SashimiDataset(data)
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=10, shuffle=True)
     
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), 2e-5)
@@ -72,10 +72,9 @@ if __name__ == '__main__':
 
             optimizer.zero_grad()
             outputs = model(**inputs)
-            start, end = outputs[0], outputs[1]
-            label = label.cuda()
+            predict = torch.stack(outputs, -1)
 
-            loss = loss_fn(start, label[:,0]) + loss_fn(end, label[:,1])
+            loss = loss_fn(predict, label.cuda())
             loss.backward()
             optimizer.step()
             
