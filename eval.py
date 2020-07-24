@@ -5,9 +5,16 @@ import torch
 import torch.nn as nn
 import ast
 import tqdm
+import argparse
 
 from transformers import AutoConfig, AutoTokenizer, BertForQuestionAnswering
 from torch.utils.data import DataLoader, Dataset
+
+
+parse = argparse.ArgumentParser()
+parse.add_argument('--text', type=str, help='Conversation text')
+
+args = parse.parse_args()
 
 
 class SashimiDataset(Dataset):
@@ -29,7 +36,7 @@ class SashimiDataset(Dataset):
         label = torch.LongTensor(label)
         
         plus_idx = (inputs['input_ids'] == 102).nonzero()[0,1]
-        label += plus_idx + 1
+        label += plus_idx
         
         return inputs, label
         
@@ -52,6 +59,8 @@ if __name__ == '__main__':
         'What time?',
         'Where to go?'
     ]
+    
+    TEXT = args.text
 
     """
     data = get_data('./data/training_data.csv', sep='\t')
@@ -88,13 +97,13 @@ if __name__ == '__main__':
     """
     
     model.load_state_dict('e3le2e5.pth')
+    model.cuda()
     model.eval()
     
-    
-    TEXT = "Sup! Sup. Let's see a play on Friday? Ok. Where should we meet? I don't know. How about the theme park? Sure! When? 9 pm? Sorry, I can't. How about 11 pm? Sure. See you then!"
-
     for qs in QUESTIONS:
         inputs = tokenizer(qs, TEXT, return_tensors='pt')
+        for k in inputs.keys():
+            inputs[k] = inputs[k].squeeze(1).cuda()
         with torch.no_grad():
             outputs = model(**inputs)
             start, end = torch.argmax(outputs[0]), torch.argmax(outputs[1])
