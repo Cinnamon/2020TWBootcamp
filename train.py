@@ -56,14 +56,16 @@ if __name__ == '__main__':
 
     data = get_data('./data/updated3500s.csv', sep='\t')
     dataset = SashimiDataset(data)
-    dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=2)
     
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), 2e-5)
+    num_epoch = 5
+    lr = 1e-5
+    optimizer = torch.optim.AdamW(model.parameters(), lr)
     
     model.cuda()
     model.train()
-    for epoch in range(5):
+    for epoch in range(num_epoch):
         total_loss = 0
         
         for inputs, label in tqdm.tqdm(dataloader):
@@ -83,4 +85,4 @@ if __name__ == '__main__':
             
         print(f'Train loss {total_loss}')
         
-    torch.save(model.state_dict(), 'e3le2e5.pth')
+    torch.save(model.state_dict(), f'e{num_epoch}lr{lr}.pth')

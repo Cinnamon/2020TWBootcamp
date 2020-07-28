@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader, Dataset
 
 parse = argparse.ArgumentParser()
 parse.add_argument('--text', type=str, help='Conversation text')
+parse.add_argument('--state_dict', type=str, help='State dict path')
 
 args = parse.parse_args()
 
@@ -96,7 +97,8 @@ if __name__ == '__main__':
     torch.save(model.state_dict(), 'e3le2e5.pth')
     """
     
-    model.load_state_dict('e3le2e5.pth')
+    sd = torch.load(args.state_dict)
+    model.load_state_dict(sd)
     model.cuda()
     model.eval()
     
